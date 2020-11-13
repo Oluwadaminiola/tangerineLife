@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css">
+    <link href="https://unpkg.com/ionicons@4.5.10-0/dist/css/ionicons.min.css" rel="stylesheet">
+
+</head>
+
+<body>
+    <div class="alert hide">
+        <div class="in">
+            <div><i class="fas fa-exclamation-circle"></i></div>
+            <div>
+                <p id="alertText"></p>
+            </div>
+            <div class="close-btn"><i class="fas fa-times"></i></div>
+        </div>
+    </div>
+    <div class="wrapper">
+
+
+        <!-- upload container -->
+        <div class="upload">
+            <div class="toptext">
+                <p>Upload</p>
+            </div>
+            <div class="upload-box show">
+                <div class="inner" id="dropZone">
+
+                    <p><i class="fas fa-cloud-download-alt"></i></p>
+                    <p>Drag and drop a file here</p>
+                    <p>or</p>
+                    <label for="input-file">
+
+
+                        <button class="btn-orange-upload">Choose File</button>
+                    </label>
+                    <input type="file" id="input-file" class="input-file" name="files">
+
+                </div>
+            </div>
+        </div>
+        <!-- upload container -->
+
+
+        <!-- table  -->
+        <div class="data-table hide">
+            <div class="toptext">
+                <p>Upload</p>
+            </div>
+            <div class="whitebox">
+                <div class="top">
+                    <div>
+                        <p>Column Mapping</p>
+                    </div>
+                    <div>
+                        <button class="btn-orange" onclick="uploadFile()">SAVE</button>
+                    </div>
+                </div>
+                <div class="tablewrap">
+                    <div id="dataCSV"></div>
+                </div>
+            </div>
+        </div>
+        <!-- table  -->
+
+    </div>
+
+
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.8.0/jszip.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.8.0/xlsx.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+
+    <script>
+        // close alert 
+        $('.close-btn').click(function () {
+            $('.alert').removeClass("show");
+            $('.alert').addClass("hide");
+        });
+
+        // populate table 
+        function populateTable(object) {
+
+            var obj = object;
+            var table = $("<table />");
+            table[0].border = "1";
+            var columns = Object.keys(obj[0]);
+            var columnCount = columns.length;
+            var row = $(table[0].insertRow(-1));
+            for (var i = 0; i < columnCount; i++) {
+                var headerCell = $("<th />");
+                headerCell.html([columns[i]]);
+                row.append(headerCell);
+            }
+
+            for (var i = 0; i < obj.length; i++) {
+                row = $(table[0].insertRow(-1));
+                for (var j = 0; j < columnCount; j++) {
+                    var cell = $("<td />");
+                    cell.html(obj[i][columns[j]]);
+                    row.append(cell);
+                }
+            }
+
+            var dvTable = $("#dataCSV");
+            dvTable.html("");
+            dvTable.append(table);
+
+        }
+
+
+        // excel sheet reader 
+        var ExcelToJSON = function () {
+
+            this.parseExcel = function (file) {
+                var reader = new FileReader();
+
+                reader.onload = function (e) {
+                    var data = e.target.result;
+                    var workbook = XLSX.read(data, {
+                        type: 'binary'
+                    });
+                    workbook.SheetNames.forEach(function (sheetName) {
+                        var XL_row_object = XLSX.utils.sheet_to_row_object_array(workbook.Sheets[sheetName]);
+                        var json_object = JSON.stringify(XL_row_object);
+                        var allObjects = JSON.parse(json_object)
+                        var firstObject = allObjects[0]
+                        if (firstObject.hasOwnProperty('Address') && firstObject.hasOwnProperty('Call Allowance') && firstObject.hasOwnProperty('Date of Birth') && firstObject.hasOwnProperty('Fullname') && firstObject.hasOwnProperty('Gender') && firstObject.hasOwnProperty('LGA') && firstObject.hasOwnProperty('Phone Number') && firstObject.hasOwnProperty('Salary') && firstObject.hasOwnProperty('State') && firstObject.hasOwnProperty('Transport Allowance')) {
+                            console.log('success')
+                            document.getElementById("alertText").textContent = "Your file has been successfully uploaded";
+                            $('.alert').addClass("show");
+                            $('.alert').addClass("info");
+                            $('.alert').removeClass("hide");
+                            setTimeout(function () {
+                                $('.alert').removeClass("show");
+                                $('.alert').removeClass("info");
+                                $('.alert').addClass("hide");
+                            }, 5000);
+                            $('.data-table').addClass("show");
+                            $('.data-table').removeClass("hide");
+                            $('.upload').addClass("hide");
+                            $('.upload').removeClass("show");
+
+
+                            populateTable(allObjects)
+
+                        } else {
+                            document.getElementById("alertText").textContent = "Please upload an excel sheet with matching headers";
+                            console.log('error')
+                            $('.alert').addClass("show");
+                            $('.alert').addClass("warning");
+                            $('.alert').removeClass("hide");
+                            setTimeout(function () {
+                                $('.alert').removeClass("show");
+                                $('.alert').removeClass("warning");
+                                $('.alert').addClass("hide");
+                            }, 5000);
+                        }
+                        console.log('hello', allObjects);
+                    })
+                };
+
+                reader.onerror = function (ex) {
+                    console.log(ex);
+                };
+
+                reader.readAsBinaryString(file);
+            };
+        };
+
+
+
+        document.querySelectorAll(".input-file").forEach((inputElement) => {
+            const dropZone = inputElement.closest(".inner");
+
+            dropZone.addEventListener("click", (e) => {
+                inputElement.click();
+            });
+
+            inputElement.addEventListener("change", (e) => {
+                if (inputElement.files.length) {
+                    var fileSheet = inputElement.files[0]
+                    var xl2json = new ExcelToJSON();
+                    xl2json.parseExcel(fileSheet);
+
+                }
+            });
+
+            dropZone.addEventListener("dragover", (e) => {
+                e.preventDefault();
+                dropZone.classList.add("overlay");
+            });
+
+            ["dragleave", "dragend"].forEach((type) => {
+                dropZone.addEventListener(type, (e) => {
+                    dropZone.classList.remove("overlay");
+                });
+            });
+
+            dropZone.addEventListener("drop", (e) => {
+                e.preventDefault();
+
+                if (e.dataTransfer.files.length) {
+                    inputElement.files = e.dataTransfer.files;
+                    var fileSheet = e.dataTransfer.files[0]
+                    var xl2json = new ExcelToJSON();
+                    xl2json.parseExcel(fileSheet);
+                }
+
+                dropZone.classList.remove("overlay");
+            });
+        });
+
+
+        function uploadFile() {
+            let excelFile = document.getElementById("input-file").files[0];
+            const url = 'https://httpbin.org/anything'
+            var body = new FormData();
+            body.append('file', excelFile)
+
+            console.log(excelFile)
+            axios({ method: 'post', url: url, data: body }).then(
+                res => {
+                    if (res.status == 200) {
+                        document.getElementById("alertText").textContent = "Your file has been successfully saved";
+                        $('.alert').addClass("show");
+                        $('.alert').addClass("info");
+                        $('.alert').removeClass("hide");
+                        setTimeout(function () {
+                            $('.alert').removeClass("show");
+                            $('.alert').removeClass("info");
+                            $('.alert').addClass("hide");
+                        }, 5000);
+                    } else {
+                        document.getElementById("alertText").textContent = res.statusText;
+                        $('.alert').addClass("show");
+                        $('.alert').addClass("warning");
+                        $('.alert').removeClass("hide");
+                        setTimeout(function () {
+                            $('.alert').removeClass("show");
+                            $('.alert').removeClass("warning");
+                            $('.alert').addClass("hide");
+                        }, 5000);
+                    }
+                }
+            ).catch(
+                err => {
+                    console.log(err)
+
+                    document.getElementById("alertText").textContent = err.statusText;
+                    $('.alert').addClass("show");
+                    $('.alert').addClass("warning");
+                    $('.alert').removeClass("hide");
+                    setTimeout(function () {
+                        $('.alert').removeClass("show");
+                        $('.alert').removeClass("warning");
+                        $('.alert').addClass("hide");
+                    }, 5000);
+                }
+            )
+        }
+    </script>
+</body>
+
+</html>
